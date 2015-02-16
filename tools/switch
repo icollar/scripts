@@ -1,0 +1,139 @@
+#!/bin/bash
+# ----------------------------------------------------
+# @author  icollar
+# @version 0.0.1
+# @title   direction-switch
+# @desc    Window switching tool. Focus switches to
+#          the next window in the desired direction.
+# ----------------------------------------------------
+
+
+# Check for script dependances
+# ----------------------------------
+function check_dependances () {
+
+	reqPkg="xdotool wmctrl"
+	for pkg in ${reqPkg}
+	do
+		hasPkg=$(dpkg --get-selections $pkg)
+		if [[ ${hasPkg} == "No packages found matching ${pkg}." || -z ${hasPkg} ]]; then
+			echo "  Please run:  sudo apt-get install $pkg"
+		fi
+	done
+
+	exit 1
+}
+
+
+# Print out the usage for the script
+# ----------------------------------
+function usage () {
+
+	echo -e "Usage:\n\t$0 <option>\n\nOptions:"
+	echo -e "\t-u - switch to the next window up"
+	echo -e "\t-d - switch to the next window down"
+	echo -e "\t-l - switch to the next window left"
+	echo -e "\t-r - switch to the next window right"
+	echo -e "\t-c - check that all dependancies are installed"
+	exit 1
+}
+
+
+# Only take one input
+if [[ $# -ne 1 ]]; then
+	usage
+fi
+
+
+# Determine the script options
+while getopts "udlrch" opt; do
+	case $opt in
+		u) DIR="u";;
+		d) DIR="d";;
+		l) DIR="l";;
+		r) DIR="r";;
+		c) check_dependances;;
+		h) usage;;
+		*) usage;;
+	esac
+done
+
+
+# Get the active windows properties
+WINDOW_ID=$(printf "0x0%x\n" $(xdotool getactivewindow))
+CURRENT_DESKTOP=$(wmctrl -d | awk '/\*/{print $1}')
+CURRENT_X=$(wmctrl -lG | grep $WINDOW_ID | awk '{print $3}')
+CURRENT_Y=$(wmctrl -lG | grep $WINDOW_ID | awk '{print $4}')
+CURRENT_W=$(wmctrl -lG | grep $WINDOW_ID | awk '{print $5}')
+CURRENT_H=$(wmctrl -lG | grep $WINDOW_ID | awk '{print $6}')
+
+#echo "X=$CURRENT_X"
+#echo "Y=$CURRENT_Y"
+#echo "W=$CURRENT_W"
+#echo "H=$CURRENT_H"
+
+if [[ $DIR == "u" ]]; then
+	ID=$(
+		wmctrl -lG |
+		awk \
+			-v D=$CURRENT_DESKTOP \
+			-v X=$CURRENT_X \
+			-v Y=$CURRENT_Y \
+			-v W=$CURRENT_W \
+			-v H=$CURRENT_H \
+			'$2==D && $4<Y && $3 >= X && $3 < (X+W) \
+			{print $3","$4","$5","$6","$1}' |
+		sort -s -t, -k2,2n -k1,1n |
+		head -n 1 |
+		awk -F, '{print $NF}')
+fi
+
+if [[ $DIR == "d" ]]; then
+	ID=$(
+		wmctrl -lG |
+		awk \
+			-v D=$CURRENT_DESKTOP \
+			-v X=$CURRENT_X \
+			-v Y=$CURRENT_Y \
+			-v W=$CURRENT_W \
+			-v H=$CURRENT_H \
+			'$2==D && $4>Y && $3 >= X && $3 < (X+W) \
+			{print $3","$4","$5","$6","$1}' |
+		sort -s -t, -k2,2n -k1,1n |
+		head -n 1 |
+		awk -F, '{print $NF}')
+fi
+
+if [[ $DIR == "l" ]]; then
+	ID=$(
+		wmctrl -lG |
+		awk \
+			-v D=$CURRENT_DESKTOP \
+			-v X=$CURRENT_X \
+			-v Y=$CURRENT_Y \
+			-v H=$CURRENT_H \
+			'$2==D && $3<X && ($4 >= Y || (($4+$6) > Y && (($4 <= Y+H)))) \
+			{print $3","$4","$5","$6","$1}' |
+		sort -s -t, -k1,1nr -k2,2n |
+		head -n 1|
+		awk -F, '{print $NF}')
+fi
+
+if [[ $DIR == "r" ]]; then
+	ID=$(
+		wmctrl -lG |
+		awk \
+			-v D=$CURRENT_DESKTOP \
+			-v X=$CURRENT_X \
+			-v Y=$CURRENT_Y \
+			-v H=$CURRENT_H \
+			'$2==D && $3>X && ($4 >= Y || (($4+$6) > Y && (($4 <= Y+H)))) \
+			{print $3","$4","$5","$6","$1}' |
+		sort -s -t, -k1,1n -k2,2n |
+		head -n 1|
+		awk -F, '{print $NF}')
+fi
+
+if [[ ! -z $ID ]]; then
+	wmctrl -ia $ID
+fi

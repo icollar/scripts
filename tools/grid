@@ -1,0 +1,194 @@
+#!/bin/bash
+# ----------------------------------------------------
+# @author  icollar
+# @version 1.4.3
+# @title   grid
+# @desc    Window positioning tool. Resizes and moves
+#          the window in focus to the desired location
+#          and size; in thirds, half two thirds.
+# ----------------------------------------------------
+
+
+# Check for script dependances
+# ----------------------------------
+function check_dependances () {
+
+	reqPkg="xdotool wmctrl"
+	for pkg in ${reqPkg}
+	do
+		hasPkg=$(dpkg --get-selections $pkg)
+		if [[ ${hasPkg} == "No packages found matching ${pkg}." || -z ${hasPkg} ]]; then
+			echo "  Please run:  sudo apt-get install $pkg"
+		fi
+	done
+
+	exit 1
+}
+
+
+# Print out the usage for the script
+# ----------------------------------
+function usage () {
+
+	echo -e "Usage:\n\t$0 <option>\n\nOptions:"
+	echo -e "\t-l - move window to the left of the screen"
+	echo -e "\t-r - move window to the right of the screen"
+	echo -e "\t-t - move window to the top of the screen"
+	echo -e "\t-b - move window to the bottom of the screen"
+	echo -e "\t-m - move window to the midddle of the screen"
+	echo -e "\t-w - move window to left or right screen. Use with -l or -r"
+	echo -e "\t-c - check that all dependancies are installed"
+	exit 1
+}
+
+
+# Only take one input
+if [[ $# -ne 1 ]]; then
+	usage
+fi
+
+
+# Determine the script options
+while getopts "lrmtbwch" opt; do
+	case $opt in
+		l) HORZ="l";;
+		r) HORZ="r";;
+		m) HORZ="m";;
+		t) VERT="t";;
+		b) VERT="b";;
+		w) MODE="w";;
+		c) check_dependances;;
+		h) usage;;
+		*) usage;;
+	esac
+done
+
+
+# Get the active windows properties
+WINDOW_ID=$(xdotool getactivewindow)
+OFFSET=$(xwininfo -id $WINDOW_ID | awk '/Relative.*Y:/{print $NF}')
+CURRENT_WIDTH=$(xwininfo -id $WINDOW_ID | awk '/Width:/{print $NF}')
+CURRENT_X_ABS=$(xwininfo -id $WINDOW_ID | awk '/Absolute.*X:/{print $NF}')
+CURRENT_X_REL=$(xwininfo -id $WINDOW_ID | awk '/Relative.*X:/{print $NF}')
+CURRENT_X=$((CURRENT_X_ABS-$CURRENT_X_REL))
+
+
+# Get the properties of the displays (Only works for two screens)
+for screen in $(xrandr | awk '/[^(dis)]connected/{print $3}');
+do
+	screen_x=$(echo $screen | awk -F[x+] '{print $3}')
+
+	if [[ $screen_x -gt 0 ]]; then
+		WIDTH_R=$(echo $screen | awk -F[x+] '{print $1}')
+		HEIGHT_R=$(echo $screen | awk -F[x+] '{print $2}')
+	else
+		WIDTH_L=$(echo $screen | awk -F[x+] '{print $1}')
+		HEIGHT_L=$(echo $screen | awk -F[x+] '{print $2}')
+	fi
+done
+
+
+# Check if we are in window move mode
+if [[ $MODE == "w" ]]; then
+
+	if [[ ! $HORZ ]];then
+		usage
+	fi
+
+	# Is the window already on the correct screen?
+	if [[ $CURRENT_X -ge $WIDTH_L && $HORZ == "r" || ! $CURRENT_X -ge $WIDTH_L && $HORZ == "l" ]]; then
+		exit
+	fi
+
+	# Determine the new X position dependant
+	# on which screen that it will be moved to
+	if [[ $HORZ == "l" ]]; then
+		X=$((CURRENT_X-$WIDTH_L))
+	else
+		X=$((CURRENT_X+$WIDTH_L))
+	fi
+
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
+	wmctrl -ir $WINDOW_ID -e 0,$X,-1,-1,-1
+	exit
+fi
+
+# Determine the geometry of the screen that the
+# active window is currently on (Upper-left corner)
+if [[ $CURRENT_X -ge $WIDTH_L ]]; then
+	X=$WIDTH_L
+	H=$HEIGHT_R
+	W=$WIDTH_R
+else
+	X=0
+	H=$HEIGHT_L
+	W=$WIDTH_L
+fi
+
+
+# Get the panel height, which is the
+# starting Y position for the window
+# NB only tested on XCFE so far...
+Y=$(wmctrl -lG | awk -v C=$CURRENT_X 'BEGIN{H=0}/[pP]anel/{if(C>=$3&&C<$5){H+=$6}}END{print H}')
+
+
+# Initalise width variables
+#   w1 - One third of display width
+#   w2 - One half of display width
+#   w3 - Two thirds of display width
+w1=$((W/3))
+w2=$((W/2))
+w3=$((W/3*2))
+
+
+# Determine the new width of the window will be and,
+# cycle through third, half, two-thirds. If HORZ==r
+# (right) then adjust the X position accordingly.
+if [[ $HORZ == "m" ]]; then
+	if [[ $CURRENT_WIDTH -lt $((W-2)) ]]; then
+		WIDTH=$((W-2))
+	else
+		WIDTH=$((w1-2))
+		X=$((X+w1))
+	fi
+else
+	if [[ $CURRENT_WIDTH -lt $((w2-2)) ]]; then
+		WIDTH=$((w2-2))
+		if [[ $HORZ == "r" ]]; then
+			X=$((X+w2))
+		fi
+	elif [[ $CURRENT_WIDTH -lt $((w3-2)) ]]; then
+		WIDTH=$((w3-2))
+		if [[ $HORZ == "r" ]]; then
+			X=$((X+w1))
+		fi
+	else
+		WIDTH=$((w1-2))
+		if [[ $HORZ == "r" ]]; then
+			X=$((X+w3))
+		fi
+	fi
+fi
+
+# Determine the Y position and height of the window
+if [[ $VERT == "t" ]]; then
+	HEIGHT=$(((H-Y)/2-OFFSET))
+elif [[ $VERT == "b" ]]; then
+	HEIGHT=$(((H-Y)/2-OFFSET))
+	Y=$((Y+HEIGHT+OFFSET+2))
+else
+	HEIGHT=$((H-OFFSET-Y-1))
+fi
+
+
+# Remove any full screen or maximized attributes and move
+# the window to the new set of co-ordinates, width and height
+wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
+wmctrl -ir $WINDOW_ID -e 0,$X,$Y,${WIDTH},${HEIGHT}
+
+# For some reason (still unknown) the first move of the
+# window does not move it to the correct postion. Executing
+# the command a second time seems to place the window in
+# the desired location.
+sleep 0.1
+wmctrl -ir $WINDOW_ID -e 0,$X,$Y,${WIDTH},${HEIGHT}

@@ -1,0 +1,95 @@
+#!/bin/bash
+# ------------------------------------------------------------------
+# @author  icollar
+# @version 1.2.1
+# @title   dhist
+# @desc    Directory History
+#          Allows for preservation of retaining the history of
+#          the changing directory. Use of go_back and go_forward
+#          allows for quick dir navigation for recently visited
+#          directories.
+# ------------------------------------------------------------------
+
+# Alias of cd will call relvant history functions:
+# - Push the current directory into the BACK_HISTORY list
+# - Clear the FORWARD_HISTORY list, as it is assumed that
+#   by going forward you will foreit the forward history
+# - Change the current directory
+# -------------------------------------------------------
+alias cd='push_back_history;clear_forward_history;change_directory'
+
+# change_directory
+# - Change the current directory to input arg
+# - clear the screen and list contents of new dir
+function change_directory() {
+	if [ -n "$1" ]; then
+		builtin cd "$@"
+	else
+		builtin cd ~
+	fi
+	clear
+	echo -e "Current: \e[1;32m$(pwd)\e[m"
+	ls -lghX
+}
+
+
+# Key Bindings
+# Alt-Left  - go_back
+# Alt-Right - go_forward
+# ----------------------
+bind '"\e[1;3D"':"\"go_back\""
+bind '"\e[1;3C"':"\"go_forward\""
+
+
+# go_back
+# - Check the BACK_HISTORY for existing directories
+# - if entry exists
+#     pop entry
+#     push entry to FORWARD_HISTORY
+#     change directory
+#   else
+#     do nothing
+# -------------------------------------------------
+function go_back() {
+	if [ ${#BACK_HISTORY[@]} -gt 0 ]; then
+		idx=$((${#BACK_HISTORY[@]} - 1 ));
+		dir=${BACK_HISTORY[$idx]};
+		unset BACK_HISTORY[$idx];
+		FORWARD_HISTORY=("${FORWARD_HISTORY[@]}" $(pwd));
+		change_directory $dir;
+	fi
+}
+
+
+# go_forward
+# - Check the FORWARD_HISTORY for existing directories
+# - if entry exists
+#     pop entry
+#     push entry to BACK_HISTORY
+#     change directory
+#   else
+#     do nothing
+# ----------------------------------------------------
+function go_forward() {
+	if [ ${#FORWARD_HISTORY[@]} -gt 0 ]; then
+		idx=$((${#FORWARD_HISTORY[@]} - 1 ))
+		dir=${FORWARD_HISTORY[$idx]}
+		unset FORWARD_HISTORY[$idx]
+		BACK_HISTORY=("${BACK_HISTORY[@]}" $(pwd));
+		change_directory $dir;
+	fi
+}
+
+
+# push_back_history
+# -----------------
+function push_back_history() {
+	BACK_HISTORY=("${BACK_HISTORY[@]}" $(pwd));
+}
+
+# clear_forward_history
+# ---------------------
+function clear_forward_history() {
+	unset FORWARD_HISTORY
+}
+

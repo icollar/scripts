@@ -1,0 +1,237 @@
+#!/bin/bash
+# -------------------------------------
+# @author  icollar
+# @version 2.4.2
+# @title   cvstool
+# @desc    handy cvstool
+# -------------------------------------
+
+function usage () {
+	echo -e "Usage: $0 [options]"
+	echo -e "\t-c <module>     - cvs_checkout: checks out the module using the dir name as the branch name"
+	echo -e "\t-b <branch>     - cvs_branch:   branch code in the current CVS directory to the given branch name"
+	echo -e "\t-u              - cvs_update:   updates the current CVS directory"
+	echo -e "\t-m <branch>     - cvs_merge:    "
+	echo -e "\t-k <branch>     - cvs_commit:   "
+	echo -e "\t-h              - help"
+	exit 1
+}
+
+if [ -z "${CVSDIR}" ] ; then
+	echo "CVSDIR must be set..."
+	exit 1
+fi
+
+export DEV_DIR=${CVSDIR}/DEV_BRANCHES
+
+if [ ! -d ${DEV_DIR} ] ; then
+	mkdir -p ${DEV_DIR}
+fi
+
+# cvs_branch
+#
+# Creates a CVS Branch
+# ----------------------
+function cvs_branch () {
+
+	# Only do this if we're in a CVS directory!
+	if [ ! -d CVS ] ; then
+		echo "cvs_branch: abort - This is not a CVS directory"
+		exit
+	fi
+
+	echo "csv_branch: init"
+
+	# Determine the current repo info
+	MODULE=$(cat CVS/Repository)
+	ROOT=$(cat CVS/Root)
+
+	# Initialise Branch and Source variables
+	BRANCH_TAG=$1
+	SOURCE_TAG=$(echo ${BRANCH_TAG} | sed 's/^..\?_/S_/g')
+
+	# Before branching always make sure
+	# the checked out code is up to date
+	echo "cvs_branch: Updating files before branching"
+	cvs_update
+
+	# Make sure the user knows what they are doing
+	echo "cvs_branch: Tagging with source tag ${SOURCE_TAG}"
+	echo "cvs_branch: Are you sure? (y/n)"
+	read answer
+
+	if echo $answer | grep -qiE "^y$|^yes$" ; then
+
+		# Tag with the source tag
+		_cvs_tag ${SOURCE_TAG}
+
+		# Make sure the user STILL knows what they are doing
+		echo "cvs_branch: Branching from source ${SOURCE_TAG} with branch name ${BRANCH_TAG}"
+		echo "cvs_branch: Are you sure? (y/n)"
+		read answer
+
+		if echo $answer | grep -qiE "^y$|^yes$" ; then
+
+			# Branch from the source tag
+			_cvs_tag ${SOURCE_TAG} ${BRANCH_TAG}
+
+			# Create the new directory, go there and check it out
+			mkdir -p ${DEV_DIR}/${BRANCH_TAG}
+			cd       ${DEV_DIR}/${BRANCH_TAG}
+
+			CVSROOT=${ROOT}
+
+			cmd="cvs co -r ${BRANCH_TAG} ${MODULE}"
+			echo "cvs_branch: Checking out newly branched module"
+			echo "cvs_branch: executing - ${cmd}"
+			eval ${cmd}
+
+			# Show the output in that directory
+			ls -l
+			echo "Checkout into: ${DEV_DIR}/${BRANCH_TAG}"
+
+		else
+			# User decided to abort, in that case clean up!
+			cmd="cvs tag -d ${SOURCE_TAG}"
+			echo "cvs_branch: abort - user cancelled"
+			echo "cvs_branch: executing - ${cmd}"
+			eval ${cmd}
+			return
+		fi
+
+	else
+		# User aborted
+		echo "cvs_branch: abort - user cancelled"
+		return
+	fi
+}
+
+
+
+# cvs_checkout
+#
+# Checkout a cvs module using the
+# current dir as the branch name
+# -------------------------------
+function cvs_checkout () {
+
+	MODULE=$1
+	BRANCH=$(basename $(pwd))
+
+	if [ -n $MODULE ] ; then
+		cmd="cvs co -r ${BRANCH} ${MODULE}"
+		echo "cvs_checkout: executing: ${cmd}"
+		eval ${cmd}
+	fi
+}
+
+
+
+# cvs_update
+#
+# Update the current CVS directory
+# --------------------------------
+function cvs_update () {
+
+	# Only do this if we're in a CVS directory!
+	if [ ! -d CVS ] ; then
+		echo "cvs_update: abort - This is not a CVS directory"
+		exit
+	fi
+
+	cmd="cvs -q upd -Pd"
+	echo "cvs_update: executing: ${cmd}"
+	eval ${cmd}
+}
+
+
+
+# _cvs_tag
+#
+# Private function to tag a CVS branch
+# ------------------------------------
+function _cvs_tag () {
+
+	# Only do this if we're in a CVS directory!
+	if [ ! -d CVS ] ; then
+		echo "_cvs_tag: abort - This is not a CVS directory"
+		exit
+	fi
+
+	if [ $# -eq 1 ] ; then
+		cmd="cvs tag ${1}"
+	elif [ $# -eq 2 ] ; then
+		cmd="cvs tag -r ${1} -b ${2}"
+	else
+		exit
+	fi
+
+	echo "_cvs_tag: executing: ${cmd}"
+	eval ${cmd}
+}
+
+
+
+# cvs_merge
+#
+# Merge specified CVS branch
+# --------------------------
+function cvs_merge () {
+
+	# Only do this if we're in a CVS directory!
+	if [ ! -d CVS ] ; then
+		echo "cvs_merge: abort - This is not a CVS directory"
+		exit
+	fi
+
+	# Determine the Pre-merge tag
+	PREMERGE=$(echo $1 | sed 's/^..\?_/PM_/g')
+	cvs_update
+	_cvs_tag $PREMERGE
+	cmd="cvs upd -kk -d -j $1"
+	echo "cvs_merge: executing: ${cmd}"
+	eval ${cmd}
+}
+
+
+
+# cvs_commit
+#
+# Commit merged CSV branch
+# ------------------------
+function cvs_commit () {
+
+	# Only do this if we're in a CVS directory!
+	if [ ! -d CVS ] ; then
+		echo "cvs_commit: abort - This is not a CVS directory"
+		exit
+	fi
+
+	BRANCH=$(echo $1 | sed 's/^..\?_/B_/g')
+	MERGED="$(echo $1 | sed 's/^..\?_/M_/g')_$(date +%Y%m%d)"
+
+	cmd="cvs commit -m \"Merge from $BRANCH\""
+	echo "cvs_commit: executing ${cmd}"
+	eval ${cmd}
+	_cvs_tag $MERGED
+}
+
+
+
+# Check arguments for the correct number
+if [[ $# -eq 0 ]]; then
+	usage
+fi
+
+# Determine which function to execute
+while getopts "b:c:um:k:h" opt; do
+	case $opt in
+		b) cvs_branch   ${OPTARG};;
+		c) cvs_checkout ${OPTARG};;
+		u) cvs_update            ;;
+		m) cvs_merge    ${OPTARG};;
+		k) cvs_commit   $2 $3    ;;
+		h) usage                 ;;
+		*) usage                 ;;
+	esac
+done

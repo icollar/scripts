@@ -1,0 +1,138 @@
+#!/bin/bash
+# ----------------------------------------------------
+# @author  icollar
+# @version 0.1.1
+# @title   screenrec
+# @desc    Screen recorder that determines the screen
+#          layout and dimensions and records using VLC
+# ----------------------------------------------------
+RCFILE=${HOME}/.vlcrecinfo
+LOGFILE=${HOME}/.vlcreclog
+
+if [ -f ${RCFILE} ]; then
+	source ${RCFILE}
+fi
+
+
+# Check for script dependances
+# ----------------------------------
+function check_dependances () {
+
+	reqPkg="vlc"
+	for pkg in ${reqPkg}
+	do
+		hasPkg=$(dpkg --get-selections $pkg)
+		if [[ ${hasPkg} == "No packages found matching ${pkg}." || -z ${hasPkg} ]]; then
+			echo "  Please run:  sudo apt-get install $pkg"
+		fi
+	done
+
+	exit 1
+}
+
+
+# Logging for verbose mode
+# ------------------------
+function log () {
+
+	if [ $VERBOSE ]; then
+		echo $@
+	fi
+}
+
+
+# Strat VLC recording
+# -------------------
+function start_vlc () {
+
+	log "Starting VLC Recording"
+
+	if [ ${PID} ]; then
+		echo    "WARNING: You are currently recording with the following:"
+		echo -e "\tPID=$PID"
+		echo -e "\tFILE=$FILE"
+		exit 1
+	fi
+
+	FILE=${HOME}/TTT${1}_$(date +%Y%m%d_%H).mp4
+
+	nohup cvlc screen:// \
+		--screen-fps 30 \
+		--sout="#transcode{vcodec=h264,vb=0,scale=0,acodec=mpga,ab=128,channels=2,samplerate=44100}:file{dst=${FILE}}" \
+		--sout-keep > ${LOGFILE} &
+
+	if [ $VERBOSE ]; then
+		cat ${LOGFILE}
+	fi
+
+	echo "PID=$!"      > ${RCFILE}
+	echo "FILE=$FILE" >> ${RCFILE}
+
+	log "Process started: $!"
+	log "Recording to file: $FILE"
+
+	echo "Recording..."
+}
+
+
+# Stop recording (if one exists)
+# ------------------------------
+function stop_vlc () {
+
+	log "Stopping VLC Recording"
+
+	if [ ! $PID ]; then
+		echo "WARNING: No recording session detected"
+		exit 1
+	fi
+
+	log "exec: kill $PID"
+	kill $PID
+
+	log "exec: rm ${RCFILE}"
+	rm ${RCFILE}
+
+	echo "Recording complete. File: $FILE"
+}
+
+
+# Print out the usage for the script
+# ----------------------------------
+function usage () {
+	echo -e "Usage:\n\t$0 <option>\n\nOptions:"
+	echo -e "\t-s - start recording"
+	echo -e "\t-x - stop recording"
+	echo -e "\t-v - verbose logging"
+	exit 1
+}
+
+# Only take one input
+if [[ $# -lt 1 ]]; then
+	usage
+fi
+
+
+# Determine the script options
+while getopts "lrvsxch" opt; do
+	case $opt in
+		v) VERBOSE=1;;
+		s) START=1;;
+		x) STOP=0;;
+		l) SCREEN="l";;
+		r) SCREEN="r";;
+		c) check_dependances;;
+		h) usage;;
+		*) usage;;
+	esac
+done
+
+if [[ ! -z $SCREEN && $START ]]; then
+	echo "MOO"
+fi
+
+if [ $START ]; then
+	start_vlc
+else
+	stop_vlc
+fi
+

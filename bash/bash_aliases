@@ -1,0 +1,75 @@
+# Global Variables
+# ----------------
+export SSH_OPT="-o ServerAliveInterval=240 -qXt"
+
+
+# Aliases
+# -------
+alias tclsh="rlwrap tclsh"
+alias rsync='\rsync -avzC --exclude "*.*.swp"'
+alias cp='\cp -r'
+alias scp='\scp -r'
+alias mkdir='\mkdir -p'
+alias h='history'
+alias j='jobs -l'
+alias which='type -a'
+alias ..='cd ..'
+alias du='du -kh'
+alias df='df -kTh'
+alias ssh="ssh $SSH_OPT"
+
+# CVS laziness
+alias cvsup='   cvs -q upd -Pd'
+alias cvscm='   cvs commit -m'
+alias branch='  cvstool -b'
+alias checkout='cvstool -c'
+alias update='  cvstool -u'
+alias merge='   cvstool -m'
+
+# Docker
+alias drmi=' docker rmi'
+alias dtree='docker images --tree'
+alias dps="  docker ps       | awk -F\"  +\" '{printf(\"%-15s%-60s%-20s%-30s%-20s\n\",\$1,\$2,\$4,\$5,\$(NF-1))}'"
+alias dpsa=" docker ps --all | awk -F\"  +\" '{printf(\"%-15s%-60s%-20s%-30s%-20s\n\",\$1,\$2,\$4,\$5,\$(NF-1))}'"
+
+# Dockertool aliases
+alias drun='   dockertool --run'
+alias dbuild=' dockertool --build'
+alias dsave='  dockertool --save'
+alias dload='  dockertool --load'
+alias dclean=' dockertool --clean'
+alias dpurge=' dockertool --purge'
+alias dimages='dockertool --images'
+
+
+# Functions
+# ---------
+
+# One function, any archive
+function extract() {
+	if [ -f $1 ] ; then
+		case $1 in
+			*.tar.bz2) tar xvjf   $1 ;;
+			*.tar.gz)  tar xvzf   $1 ;;
+			*.bz2)     bunzip2    $1 ;;
+			*.rar)     unrar x    $1 ;;
+			*.gz)      gunzip     $1 ;;
+			*.tar)     tar xvf    $1 ;;
+			*.tbz2)    tar xvjf   $1 ;;
+			*.tgz)     tar xvzf   $1 ;;
+			*.zip)     unzip      $1 ;;
+			*.Z)       uncompress $1 ;;
+			*.7z)      7z x       $1 ;;
+			*) echo "'$1' cannot be extracted via >extract<" ;;
+		esac
+	else
+		echo "'$1' is not a valid file!"
+	fi
+}
+
+# Compress with prefered method
+function compress () {
+	tar -cvzf ${1}.tgz ${1}
+}
+
+# vim:ft=sh:

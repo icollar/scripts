@@ -1,0 +1,73 @@
+#!/bin/bash
+# ------------------------------------------------------------------------------
+# @author  icollar
+# @version 3.0
+# @title   bashrc
+# @desc    My own persional bashrc configuration
+# ------------------------------------------------------------------------------
+
+# If not running interactively, don't do anything
+[ -z "$PS1" ] && return
+
+# Ignore duplicates and sucessive entries
+export HISTCONTROL=ignoredups   # ignore duplicate commands
+export HISTCONTROL=ignoreboth   # ignore duplicate commands
+export HISTCONTROL=ignorespace  # ignore commands preceded with a space
+export HISTCONTROL=erasedups    # erase duplicate commands
+export HISTTIMEFORMAT="%D %T "  # History Format
+export HISTSIZE=100000          # big big history
+export HISTFILESIZE=100000      # big big history
+export HISTIGNORE="cd:go_back:go_forward"
+
+# check window size after cmds, update LINES/COLUMNS values if nessacary
+shopt -s checkjobs      # Warn if there are stopped jobs when exiting - May not work on all versions.
+shopt -s checkwinsize   # Terminal wraps lines correctly after resizing
+shopt -s histappend     # Append terminal history on exit
+shopt -s cmdhist        # Try to save all multi-line commands to one history entry.
+shopt -s expand_aliases # Self Explainatory
+shopt -s hostcomplete   # Complete hostnames (TAB).
+shopt -s cdspell        # Try to correct spelling errors in the cd command
+shopt -s dirspell       # Try to correct spelling errors for glob matchin
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# Set the prompts
+PS1='\[\033[01;35m\]\u@\h\[\033[00m\]/\[\033[01;34m\]\W\[\033[00m\]: '
+PS2='\033[01;31m>\033[m '
+
+# enable color support of ls and also add handy aliases
+if [ "$TERM" != "dumb" ] && [ -x /usr/bin/dircolors ]; then
+	eval "$(dircolors -b)"
+	alias ls='ls --color=auto'
+	alias grep='grep --color=auto'
+fi
+
+# enable programmable completion features
+if [ -f /etc/bash_completion ]; then
+	source /etc/bash_completion
+fi
+
+# source custom binaries
+if [ -d ${HOME}/scripts/tools ]; then
+	export PATH=${HOME}/scripts/tools:${PATH}
+fi
+
+# load custom configuration
+if [ -d ${HOME}/scripts/bash ]; then
+	for func in ${HOME}/scripts/bash/* ; do
+		source ${func}
+	done
+fi
+
+if [ -d ${HOME}/.init.d ]; then
+	for file in ${HOME}/.init.d/* ; do
+		source ${file}
+	done
+fi
+
+tabs 4
+export EDITOR='vim -X'
+export DISPLAY=:0.0
+export LANG=C
+export PYTHONSTARTUP=${HOME}/.pystartup

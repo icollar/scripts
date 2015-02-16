@@ -1,0 +1,304 @@
+#!/bin/bash
+# -------------------------------------
+# @author  icollar
+# @version 1.0
+# @title   dockertool
+# @desc    handy tool to shortcut build
+#          run, cleaning up, etc..
+# -------------------------------------
+#
+# The following are configurations that should
+# be added to the top an images Dockerfile.
+#
+# REPOSITORY - repository the image will be saved to
+# OS         - use if you want to specify the original OS
+#              e.g. centos/rhel/ubuntu/debian
+# TYPE       - which kind of image is this?
+#                - BASE - image that acts as a base image for apps
+#                - APP  - image for running and application
+#                - DB   - image for running databases
+#                - ENV  - images for simulating environments; developemt/tools
+#                * leave blank if this is THE base image for the OS
+# IMAGE      - name of the image
+# VERSION    - current version of the image
+# PUBLISH    - comma seperated list of ports
+# VOLUME     - comma seperated list of volumes
+# LINK       - comma seperated list of linked containers
+# HOSTNAME   - hostname for the image to take at runtime
+# NAME       - name of the container
+# WORKDIR    - starting working directory at runtime
+
+# Configuration should be supplied in the exact format.
+# Only configures between the two '#>--' lines will be parsed.
+
+# Example configuration
+#>---------------------------------
+# REPOSITORY : some.repo.com
+# OS         : centos
+# TYPE       : app
+# IMAGE      : dev-environment
+# VERSION    : 1.3
+# PUBLISH    : 10022:22,8080
+# VOLUME     : /home:/home/dev
+# LINK       : db01:db
+# HOSTNAME   : dev01
+# NAME       : dev
+# WORKDIR    : /home/dev
+#>---------------------------------
+
+# Configurations
+config_multi="publish volume link"
+config_single="hostname name workdir"
+
+# Temporary hack... just don't ask
+export HOSTNAME=
+
+function usage () {
+	echo "Usage: $0 COMMAND [OPTIONS] [OVERRIDES]"
+	echo ""
+	echo "  OPTIONS:"
+	echo "    -i - if the container name is already in use; add a post-fix id"
+	echo "    -t - time the command"
+	echo "    -q - prints the command only (run, build)"
+	echo "    -x - dont use /bin/bash as run command"
+	echo ""
+	echo "  COMMANDS:"
+	echo "    -r, --run  <args>     - run an image"
+	echo "    -b, --build           - build from the dockerfile"
+	echo "    -i, --images <filter> - list local images"
+	echo "    -c, --clean           - cleans up untagged images"
+	echo "    -p, --purge           - purges stopped containers"
+	echo "    -h, --help            - help"
+	exit 1
+}
+
+
+# Remove all containers
+# ---------------------
+function docker_purge () {
+	$TIME sudo docker ps --all |
+	awk '{if ($1!="CONTAINER") print "sudo docker rm -f "$1}' |
+	bash
+}
+
+
+# Remove all untagged images
+# --------------------------
+function docker_clean () {
+	$TIME sudo docker images |
+	grep '<none>' |
+	awk '{print "sudo docker rmi -f "$3}' |
+	bash
+}
+
+
+# List images. sort and filter
+# ----------------------------
+function docker_images () {
+	filter=${1:-*}
+	sudo docker images |
+	sed '1d' |
+	sort | grep -E "$filter"
+}
+
+
+# Save the docker image matching the current dir Dockerfile
+# ---------------------------------------------------------
+function docker_save () {
+
+	# TODO - rewrite to save the image as per
+	#configuration taken from a Docker file in
+	# the current directory.
+
+	# 1. Parse Dockerfile
+	# 2. Construct output filename
+	# 3. Save file
+	# 4. compress with gzip
+}
+
+
+# Parse the Dockerfile as config
+# ------------------------------
+function _parse_dockerfile () {
+
+	# Must be in a directory with a Dockerfile
+	if [ ! -f Dockerfile ]; then
+		echo "Cannot find Dockerfile... exiting"
+		usage
+		exit 1
+	fi
+
+	if [ $(grep '#>--' Dockerfile | wc -l) -ne 2 ]; then
+		echo "Configuration cannot be found..."
+		echo "must be placed in comments between two lines matching '#>--'"
+		exit 1
+	fi
+
+	# Dockerfile exists, then parse the configuration
+	# located at the top of the file...
+	source <(
+		sed -n "/#>--/,/#>--/p" Dockerfile |
+		sed 's/#\s*\([a-zA-Z]\+\)[ \t:]*/export \U\1\E=/'
+	)
+}
+
+
+# Build the image path
+# --------------------
+function _image_path () {
+
+	IMAGE_PATH=
+	if [ -n "$REPOSITORY" ]; then
+		IMAGE_PATH+=${REPOSITORY}/
+	fi
+
+	if [ -n "$OS" ]; then
+		IMAGE_PATH+=${OS}/
+	fi
+
+	if [ -n "$TYPE" ]; then
+		LTYPE=$(echo $TYPE | sed 's/\(.*\)/\L\1\E/')
+		if ! echo $LTYPE | grep -qE "^base$|^app$|^db$|^env$" ; then
+			echo "$TYPE is not a valid type. Must be either 'base', 'app', 'db', or 'env'"
+			exit 1
+		fi
+		IMAGE_PATH+=${LTYPE}.
+	fi
+
+	if [ -z "$IMAGE" ]; then
+		echo "IMAGE config not set in Dockerfile"
+		exit 1
+	fi
+
+	IMAGE_PATH+=$IMAGE
+	IMAGE_PATH+=:${VERSION:-latest}
+}
+
+
+# Construct a build command
+# -------------------------
+function docker_build () {
+
+	_parse_dockerfile
+	_image_path
+
+	COMMAND="$TIME sudo docker build -t $IMAGE_PATH ."
+
+	echo "Executing: $COMMAND"
+	if $EXEC ; then
+		eval $COMMAND
+	fi
+}
+
+
+# Construct a run command
+# -----------------------
+function docker_run () {
+
+	_parse_dockerfile
+	_image_path
+
+	# Source the configuration
+	source <(echo $@ | sed 's/--\([a-zA-Z]\+\)\s*/\nexport \U\1\E=/g')
+
+	COMMAND="sudo docker run -ti"
+
+	# Binds up any repeatable configuration
+	for config in ${config_multi}
+	do
+		# Look through the comma seperated list
+		local IFS=','
+		CFG=$(echo $config | sed 's/\(.*\)/\U\1\E/')
+		if [ -n "${!CFG}" ]; then
+			for value in ${!CFG} ; do
+
+				# Check if the linked container actually exists
+				if [ "${CFG}" == "LINK" ]; then
+					link=$(echo $value | sed 's/:.*$//')
+					count=$(sudo docker ps | sed '1d' | awk '{print $NF}' | grep -cE "^$link$")
+					if [ $count -ne 1 ]; then
+						echo "WARNING: Linking container $link has not been detected"
+						exit 1
+					fi
+					unset count
+				fi
+
+				COMMAND+=" --$config $value"
+				if ! echo $value | grep -q : ; then
+					COMMAND+=":$value"
+				fi
+			done
+		fi
+
+		# Reset the Internal Field Seperator
+		unset IFS
+	done
+
+	# Bind up singluar configuration
+	for config in ${config_single}
+	do
+		CFG=$(echo $config | sed 's/\(.*\)/\U\1\E/')
+		if [ -n "${!CFG}" ]; then
+
+			# Special handling for NAME since dockers error handling is... well
+			if [ "${CFG}" == "NAME" ]; then
+				# How many containers are already running?
+				count=$(sudo docker ps --all | sed '1d' | awk '{print $NF}' | grep -cE "^${!CFG}(-[0-9])*$")
+				if [[ $count -gt 0 && ! $POSTFIX ]];then
+					echo "WARNING: A container is already running with the name: $NAME"
+					exit 1
+				elif [[ $count -gt 0 && $POSTFIX ]];then
+					# POSTFIX is enabled rename the container instance by postfixing the current count
+					export NAME="${NAME}-${count}"
+				fi
+				unset count
+			fi
+
+			COMMAND+=" --$config ${!CFG}"
+		fi
+	done
+
+	COMMAND+=" $IMAGE_PATH"
+	COMMAND+=" $START"
+
+	echo "Executing: $COMMAND"
+	if $EXEC ; then
+		eval $COMMAND
+	fi
+}
+
+
+# Check arguments for the correct number
+if [[ $# -lt 1 ]]; then
+	usage
+fi
+
+EXEC=true
+START=/bin/bash
+TIME=
+
+opt=$1
+shift
+
+#  parse options
+for param in $*
+do
+	case $param in
+		-i) POSTFIX=true;;
+		-t) TIME="/usr/bin/time -p";;
+		-q) EXEC=false;;
+		-x) START=;;
+		*)  break;;
+	esac
+	shift
+done
+
+# What command to run...
+case $opt in
+	-r|--run)    docker_run    $@;;
+	-b|--build)  docker_build  $@;;
+	-i|--images) docker_images $@;;
+	-c|--clean)  docker_clean;;
+	-p|--purge)  docker_purge;;
+	*) usage;;
+esac
