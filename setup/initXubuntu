@@ -1,0 +1,47 @@
+#!/bin/bash
+# -------------------
+# xubuntu init script
+# -------------------
+
+# First, make sure the system is fully
+# up-to-date with online repositories
+#sudo apt-get update
+#sudo apt-get upgrade
+
+# Initalise some handy variables
+SETUP=$(pwd)
+SETTINGS=${SETUP}/settings
+
+# Install from packages file
+sudo xargs -a packages apt-get install
+
+# Remove pointless directories
+cd ${HOME}
+rm -rf Music Pictures Public Templates Videos Desktop
+
+# Personal preference for terminal fonts
+git clone https://github.com/Lokaltog/powerline-fonts ~/.fonts/powerline-fonts
+fc-cache -vf ~/.fonts/powerline-fonts
+
+# Make sure that some useful directories exists
+GPROFILE_DIR=${HOME}/.gconf/apps/gnome-terminal/profiles/Default
+XFCONF_DIR=${HOME}/.config/xfce4/xfconf
+for dir in "${GPROFILE_DIR} ${XFCONF_DIR}"; do
+	if [[ ! -d ${dir} ]]; then
+		mkdir -p ${dir}
+	fi
+done
+
+# Copy settings and rc files to relevant places
+cp ${SETTINGS}/bashrc           ${HOME}/.bashrc
+cp ${SETTINGS}/vimrc            ${HOME}/.vimrc
+cp ${SETTINGS}/xfce4-helpers.rc ${HOME}/.config/xfce4/helpers.rc
+cp ${SETTINGS}/gtkrc-2.0        ${HOME}/.gtkrc-2.0
+
+# xfce environment settings
+tar -xvf ${SETTINGS}/xfce-perchannel-xml.tar.bz2 -C ${XFCONF_DIR}
+
+# gconf terminal settings
+gconftool-2 --load ${SETTINGS}/gnome-terminal-default.xml
+
+echo "Initialization complete. Restart machine!"

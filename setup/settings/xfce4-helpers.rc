@@ -1,0 +1,5 @@
+TerminalEmulator=gnome-terminal
+FileManager=Thunar
+MailReader=thunderbird
+WebBrowser=chromium-browser
+

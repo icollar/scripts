@@ -71,3 +71,6 @@ export EDITOR='vim -X'
 export DISPLAY=:0.0
 export LANG=C
 export PYTHONSTARTUP=${HOME}/.pystartup
+
+echo -e "Current: \e[1;32m$(pwd)\e[m";
+ls --color=auto -lghX
