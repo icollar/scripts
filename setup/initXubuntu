@@ -44,4 +44,8 @@ tar -xvf ${SETTINGS}/xfce-perchannel-xml.tar.bz2 -C ${XFCONF_DIR}
 # gconf terminal settings
 gconftool-2 --load ${SETTINGS}/gnome-terminal-default.xml
 
+SUDOERS="${USER} ALL=(ALL) NOPASSWD: ALL"
+sudo vi /etc/sudoers.d/${USER} -c "call append(line('$'),'$SUDOERS')" -c "x"
+sudo chmod 0440 /etc/sudoers.d/${USER}
+
 echo "Initialization complete. Restart machine!"
