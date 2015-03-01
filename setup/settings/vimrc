@@ -53,10 +53,6 @@ set ttymouse=xterm2             " mouse xterm settings
 set textwidth=0                 " Don't wrap lines by default
 
 
-" Stop stupid python settings
-autocmd FileType python setlocal tabstop=4
-autocmd FileType python setlocal noexpandtab
-
 
 " Custom Functions
 " ----------------
@@ -77,14 +73,42 @@ nmap <silent> <A-Up>    :wincmd k<CR>
 nmap <silent> <A-Down>  :wincmd j<CR>
 nmap <silent> <A-Left>  :wincmd h<CR>
 nmap <silent> <A-Right> :wincmd l<CR>
-
-let g:SuperTabDefaultCompletionType = "context"
-let g:tagbar_usearrows = 1
+nmap <silent> <C-n> :bp<CR>
+nmap <silent> <C-m> :bn<CR>
+nmap <silent> <leader>q ml:call BufferQuit()<CR>
 
 imap <NUL> <Space>
 map <C-Z> <Nop>
 
-let g:togglewhite = 'a'
+
+" Globals
+let g:SuperTabDefaultCompletionType = "context"
+let g:tagbar_usearrows = 1
+let g:togglewhite                   = 'a'
+
+" Functions
+function! BufferQuit()
+	let bufferCount = NrBufs()
+	if bufferCount > 1
+		bp
+		bd! #
+	else
+		echo "NONE LEFT"
+	endif
+endfunction
+
+function! NrBufs()
+	let i = bufnr('$')
+	let j = 0
+		while i >= 1
+			if buflisted(i)
+				let j+=1
+			endif
+			let i-=1
+		endwhile
+	return j
+endfunction
+
 function! ToggleWhitespace()
 	if g:togglewhite == 'a'
 		hi WhiteSpace cterm=NONE ctermbg=red ctermfg=NONE guibg=red guifg=NONE
@@ -180,3 +204,12 @@ endif
 filetype plugin indent on
 colorscheme moose
 
+" Stop stupid python settings
+autocmd FileType python setlocal tabstop=4
+autocmd FileType python setlocal noexpandtab
+
+" Autoload NERDTree
+autocmd VimEnter * NERDTree | wincmd l
+
+" Autoclose NERDTree if last nothing is left in the buffer
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif

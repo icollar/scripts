@@ -16,7 +16,10 @@ alias which='type -a'
 alias ..='cd ..'
 alias du='du -kh'
 alias df='df -kTh'
+alias vi='vim -XO'
+alias si='sudo -E vi'
 alias ssh="ssh $SSH_OPT"
+
 
 # CVS laziness
 alias cvsup='   cvs -q upd -Pd'
@@ -70,6 +73,39 @@ function extract() {
 # Compress with prefered method
 function compress () {
 	tar -cvzf ${1}.tgz ${1}
+}
+
+
+# VIM friendly grep styling
+function vgrep () {
+
+	if [ -z "$1" ]; then
+		echo "No search term provided..."
+		return
+	fi
+
+	if [ -z "$2" ]; then
+		echo "No search location provided..."
+		return
+	fi
+
+	echo "grep -inrsE $1 $2"
+	grep -inrsE "$1" $2 |
+		perl -ne 's/\.\/(.*):([0-9])+:\s*(.*)/printf("\e[35mvi%5s %-40s  \e[m--  %s\n","+$2",$1,$3,$5)/ei' |
+		perl -pe "s/($1)/\e[31m\1\e[m/gi" |
+		less -RS
+}
+
+
+# Allow functions to get quick access to things on the path
+function vib () {
+	vi $(\which $1)
+}
+
+
+function cdb () {
+	cd $(dirname $(\which $1))
+	here | perl -pe "s/($1)/\e[31m\1\e[m/"
 }
 
 # vim:ft=sh:
