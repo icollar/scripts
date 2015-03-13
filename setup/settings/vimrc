@@ -76,6 +76,8 @@ nmap <silent> <A-Right> :wincmd l<CR>
 nmap <silent> <C-n> :bp<CR>
 nmap <silent> <C-m> :bn<CR>
 nmap <silent> <leader>q ml:call BufferQuit()<CR>
+nmap <silent> <leader>o ml:call Space2Tab()<CR>
+nmap <silent> <leader>p ml:call Tab2Space()<CR>
 
 imap <NUL> <Space>
 map <C-Z> <Nop>
@@ -127,6 +129,17 @@ function! ToggleMouse()
 		set mouse=a
 	endif
 endfunction
+
+
+function! Space2Tab()
+	while search('^\t* \{2}') != 0
+		execute ':%s/^\t*\zs \{2}/\t/g'
+	endwhile
+endfu
+
+function! Tab2Space()
+	execute ':%s/\t/  /g'
+endfu
 
 
 " Remember where we were last time

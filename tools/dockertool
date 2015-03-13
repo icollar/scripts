@@ -108,7 +108,7 @@ function docker_purge () {
 	containers=$(docker ps -a -q)
 	echo "Removing $(echo $containers| wc -w) container(s)"
 	for container in $containers; do
-		sudo docker rm $container
+		sudo docker rm -f $container
 	done
 	unset containers
 }
@@ -207,6 +207,7 @@ function docker_build () {
 
 	FILE=Dockerfile
 	DOCKERFILE=
+	CACHE=
 
 	# Available in 1.5.0 and later
 	if [ ${FUNC_BUILD_FILENAME} -a -f "$1" ]; then
@@ -214,10 +215,14 @@ function docker_build () {
 		DOCKERFILE="-f ${FILE}"
 	fi
 
+	if ${NOCACHE} ; then
+		CACHE="--no-cache=true"
+	fi
+
 	_parse_dockerfile ${FILE}
 	_image_path
 
-	run "sudo docker build -t $IMAGE_PATH:${VERSION:-latest} ${DOCKERFILE} ."
+	run "sudo docker build ${CACHE} -t ${IMAGE_PATH}:${VERSION:-latest} ${DOCKERFILE} ."
 
 	if [ "$RES" != "<ID>" ]; then
 		if [ ${VERSION:-latest} != "latest" -a ${VERSION:-latest} != "dev" ]; then
@@ -370,6 +375,7 @@ fi
 POSTFIX=false
 EXEC=true
 VERBOSE=false
+NOCACHE=false
 
 opt=$1
 shift
@@ -381,6 +387,7 @@ do
 		-i) POSTFIX=true;;
 		-q) EXEC=false;;
 		-v) VERBOSE=true;;
+		-n) NOCACHE=true;;
 		*)  break;;
 	esac
 	shift
