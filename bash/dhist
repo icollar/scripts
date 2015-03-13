@@ -18,6 +18,11 @@
 # -------------------------------------------------------
 alias cd='push_back_history;clear_forward_history;change_directory'
 
+function here () {
+	echo -e "Current: \e[1;32m$(pwd)\e[m"
+	ls -lghX
+}
+
 # change_directory
 # - Change the current directory to input arg
 # - clear the screen and list contents of new dir
@@ -28,8 +33,7 @@ function change_directory() {
 		builtin cd ~
 	fi
 	clear
-	echo -e "Current: \e[1;32m$(pwd)\e[m"
-	ls -lghX
+	here
 }
 
 
