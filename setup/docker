@@ -1,0 +1,5 @@
+curl -sSL https://get.docker.com/ubuntu/ | sudo sh
+sudo groupadd docker
+sudo gpasswd -a ${USER} docker
+sudo service docker restart
+newgrp docker

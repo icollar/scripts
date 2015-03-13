@@ -5,15 +5,20 @@
 
 # First, make sure the system is fully
 # up-to-date with online repositories
-#sudo apt-get update
-#sudo apt-get upgrade
+sudo apt-get update
+sudo apt-get upgrade -y
 
 # Initalise some handy variables
 SETUP=$(pwd)
 SETTINGS=${SETUP}/settings
 
-# Install from packages file
-sudo xargs -a packages apt-get install
+# Install system packages
+apps="gnome-do gnome-system-monitor gnome-terminal chromium-browser meld
+	flashplugin-installer curl ssh sshpass rlwrap vim wmctrl xdotool"
+
+for app in $apps; do
+	sudo apt-get install -y $app
+done
 
 # Remove pointless directories
 cd ${HOME}
