@@ -14,7 +14,8 @@ SETTINGS=${SETUP}/settings
 
 # Install system packages
 apps="gnome-do gnome-system-monitor gnome-terminal chromium-browser meld
-	flashplugin-installer curl ssh sshpass rlwrap vim wmctrl xdotool"
+	flashplugin-installer curl ssh sshpass rlwrap vim wmctrl xdotool
+	cvs subversion git"
 
 for app in $apps; do
 	sudo apt-get install -y $app
