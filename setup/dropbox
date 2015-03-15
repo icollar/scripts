@@ -1,0 +1,10 @@
+# Install the latest Dropbox for Ubuntu
+DROPBOX_URL='https://linux.dropbox.com/packages/ubuntu/'
+echo "Choose a Dropbox Package"
+curl -s $DROPBOX_URL | awk -F\" '/amd/{print $2}'
+read -p "Package: " DROPBOX_PKG
+wget ${DROPBOX_URL}${DROPBOX_PKG}
+sudo gdebi $DROPBOX_PKG
+rm $DROPBOX_PKG
+
+# vim:ft=sh

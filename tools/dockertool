@@ -49,13 +49,13 @@
 # Configurations
 config_multi="publish volume link"
 config_single="hostname name workdir user net entrypoint"
-docker_version=$(sudo docker --version | awk -F" |," '{print $3}')
-docker_v_major=$(echo $docker_version | awk -F\. '{print $1}')
-docker_v_minor=$(echo $docker_version | awk -F\. '{print $2}')
-docker_v_patch=$(echo $docker_version | awk -F\. '{print $3}')
+docker_version=$(docker --version | awk -F" |," '{print $3}')
+docker_v_major=$(echo ${docker_version} | awk -F\. '{print $1}')
+docker_v_minor=$(echo ${docker_version} | awk -F\. '{print $2}')
+docker_v_patch=$(echo ${docker_version} | awk -F\. '{print $3}')
 
 # Handle backwards compatibility
-if [ $docker_v_major -ge 1 -a $docker_v_minor -ge 5 ]; then
+if [ ${docker_v_major} -ge 1 -a ${docker_v_minor} -ge 5 ]; then
 	# Enable docker build -f compatibility
 	FUNC_BUILD_FILENAME=true
 fi
@@ -93,10 +93,10 @@ function run () {
 	echo "Executing: $@"
 	tmp=".___dktooltpm___"
 	RES="<ID>"
-	if $EXEC ; then
-		eval $@ 2>&1 | tee -a $tmp
-		RES=$(cat $tmp)
-		rm $tmp
+	if ${EXEC} ; then
+		eval $@ 2>&1 | tee -a ${tmp}
+		RES=$(cat ${tmp})
+		rm ${tmp}
 	fi
 	export RES
 }
@@ -106,9 +106,9 @@ function run () {
 # ---------------------
 function docker_purge () {
 	containers=$(docker ps -a -q)
-	echo "Removing $(echo $containers| wc -w) container(s)"
-	for container in $containers; do
-		sudo docker rm $container
+	echo "Removing $(echo ${containers}| wc -w) container(s)"
+	for container in ${containers}; do
+		docker rm ${container}
 	done
 	unset containers
 }
@@ -118,15 +118,15 @@ function docker_purge () {
 # --------------------------
 function docker_clean () {
 	containers=$(docker ps -a -q -f status=exited)
-	echo "Removing $(echo $containers| wc -w) container(s)"
-	for container in $containers; do
-		sudo docker rm $container
+	echo "Removing $(echo ${containers} | wc -w) container(s)"
+	for container in ${containers}; do
+		docker rm ${container}
 	done
 
 	images=$(docker images -q -f dangling=true)
-	echo "Removing $(echo $images | wc -w) images(s)"
-	for image in $images; do
-		sudo docker rmi $image
+	echo "Removing $(echo ${images} | wc -w) images(s)"
+	for image in ${images}; do
+		docker rmi ${image}
 	done
 	unset container containers image images
 }
@@ -136,10 +136,10 @@ function docker_clean () {
 # ----------------------------
 function docker_images () {
 	filter=${1:-*}
-	sudo docker images |
+	docker images |
 		sed '1d' |
 		sort |
-		grep -E "$filter" |
+		grep -E "${filter}" |
 		grep -vE "latest|none|flat"
 }
 
@@ -175,29 +175,29 @@ function _parse_dockerfile () {
 function _image_path () {
 
 	IMAGE_PATH=
-	if [ -n "$REPOSITORY" ]; then
+	if [ -n "${REPOSITORY}" ]; then
 		IMAGE_PATH+=${REPOSITORY}/
 	fi
 
-	if [ -n "$OS" ]; then
+	if [ -n "${OS}" ]; then
 		IMAGE_PATH+=${OS}/
 	fi
 
-	if [ -n "$TYPE" ]; then
-		LTYPE=$(echo $TYPE | sed 's/\(.*\)/\L\1\E/')
-		if ! echo $LTYPE | grep -qE "^base$|^app$|^db$|^env$" ; then
-			echo "$TYPE is not a valid type. Must be either 'base', 'app', 'db', or 'env'"
+	if [ -n "${TYPE}" ]; then
+		LTYPE=$(echo ${TYPE} | sed 's/\(.*\)/\L\1\E/')
+		if ! echo ${LTYPE} | grep -qE "^base$|^app$|^db$|^env$" ; then
+			echo "${TYPE} is not a valid type. Must be either 'base', 'app', 'db', or 'env'"
 			exit 1
 		fi
 		IMAGE_PATH+=${LTYPE}.
 	fi
 
-	if [ -z "$IMAGE" ]; then
+	if [ -z "${IMAGE}" ]; then
 		echo "IMAGE config not set in Dockerfile"
 		exit 1
 	fi
 
-	IMAGE_PATH+=$IMAGE
+	IMAGE_PATH+=${IMAGE}
 }
 
 
@@ -217,12 +217,12 @@ function docker_build () {
 	_parse_dockerfile ${FILE}
 	_image_path
 
-	run "sudo docker build -t $IMAGE_PATH:${VERSION:-latest} ${DOCKERFILE} ."
+	run "docker build -t ${IMAGE_PATH}:${VERSION:-latest} ${DOCKERFILE} ."
 
-	if [ "$RES" != "<ID>" ]; then
+	if [ "${RES}" != "<ID>" ]; then
 		if [ ${VERSION:-latest} != "latest" -a ${VERSION:-latest} != "dev" ]; then
 			echo "Tagging as latest"
-			run "sudo docker tag -f $IMAGE_PATH:${VERSION} $IMAGE_PATH"
+			run "docker tag -f ${IMAGE_PATH}:${VERSION} ${IMAGE_PATH}"
 		fi
 	fi
 }
@@ -244,31 +244,31 @@ function docker_run () {
 	# Source the configuration
 	source <(echo $@ | sed 's/--\([a-zA-Z]\+\)\s*/\nexport \U\1\E=/g')
 
-	COMMAND="sudo docker run -ti"
+	COMMAND="docker run -ti"
 
 	# Binds up any repeatable configuration
 	for config in ${config_multi}
 	do
 		# Look through the comma seperated list
 		local IFS=','
-		CFG=$(echo $config | sed 's/\(.*\)/\U\1\E/')
+		CFG=$(echo ${config} | sed 's/\(.*\)/\U\1\E/')
 		if [ -n "${!CFG}" ]; then
 			for value in ${!CFG} ; do
 
 				# Check if the linked container actually exists
 				if [ "${CFG}" == "LINK" ]; then
-					link=$(echo $value | sed 's/:.*$//')
-					count=$(docker ps | sed '1d' | awk '{print $NF}' | grep -cE "^$link$")
-					if [ $count -ne 1 ]; then
-						echo "WARNING: Linking container $link has not been detected"
+					link=$(echo ${value} | sed 's/:.*$//')
+					count=$(docker ps | sed '1d' | awk '{print $NF}' | grep -cE "^${link}$")
+					if [ ${count} -ne 1 ]; then
+						echo "WARNING: Linking container ${link} has not been detected"
 						exit 1
 					fi
 					unset count
 				fi
 
-				COMMAND+=" --$config $value"
-				if ! echo $value | grep -q : ; then
-					COMMAND+=":$value"
+				COMMAND+=" --${config} ${value}"
+				if ! echo ${value} | grep -q : ; then
+					COMMAND+=":${value}"
 				fi
 			done
 		fi
@@ -280,36 +280,37 @@ function docker_run () {
 	# Bind up singluar configuration
 	for config in ${config_single}
 	do
-		CFG=$(echo $config | sed 's/\(.*\)/\U\1\E/')
+		CFG=$(echo ${config} | sed 's/\(.*\)/\U\1\E/')
 		if [ -n "${!CFG}" ]; then
 
 			# Special handling for NAME since dockers error handling is... well
 			if [ "${CFG}" == "NAME" ]; then
 				# How many containers are already running?
 				count=$(docker ps --all | sed '1d' | awk '{print $NF}' | grep -cE "^${!CFG}(-[0-9])*$")
-				if [[ $count -gt 0 && ! $POSTFIX ]];then
-					echo "WARNING: A container is already running with the name: $NAME"
+				if [[ ${count} -gt 0 && ! ${POSTFIX} ]];then
+					echo "WARNING: A container is already running with the name: ${NAME}"
 					exit 1
-				elif [[ $count -gt 0 && $POSTFIX ]];then
+				elif [[ ${count} -gt 0 && ${POSTFIX} ]];then
 					# POSTFIX is enabled rename the container instance by postfixing the current count
 					export NAME="${NAME}-${count}"
 				fi
 				unset count
 			fi
 
-			COMMAND+=" --$config ${!CFG}"
+			COMMAND+=" --${config} ${!CFG}"
 		fi
 	done
 
 	# ENV works differently...
 	IFS=,
-	for value in $ENV ; do
-		COMMAND+=" --env $value"
+	for value in ${ENV} ; do
+		COMMAND+=" --env ${value}"
 	done
 	unset IFS
 
-	COMMAND+=" $IMAGE_PATH"
-	run $COMMAND
+	COMMAND+=" ${IMAGE_PATH}:${VERSION}"
+
+	run ${COMMAND}
 }
 
 
@@ -332,7 +333,7 @@ function docker_save () {
 
 	FILENAME=$(basename ${IMAGE_PATH}-${VERSION}).tar
 
-	run "sudo docker save -o ${FILENAME} ${IMAGE_PATH}:${VERSION}"
+	run "docker save -o ${FILENAME} ${IMAGE_PATH}:${VERSION}"
 	run gzip ${FILENAME}
 }
 
@@ -356,9 +357,9 @@ function docker_squash () {
 	_image_path
 
 	# Create a container and use the export/import trick
-	run "sudo docker create ${IMAGE_PATH}:${VERSION}"
-	run "sudo docker export ${RES} | docker import -"
-	run "sudo docker tag -f ${RES} ${IMAGE_PATH}:${VERSION}-flat"
+	run "docker create ${IMAGE_PATH}:${VERSION}"
+	run "docker export ${RES} | docker import -"
+	run "docker tag -f ${RES} ${IMAGE_PATH}:${VERSION}-flat"
 }
 
 
@@ -377,7 +378,7 @@ shift
 #  parse options
 for param in $*
 do
-	case $param in
+	case ${param} in
 		-i) POSTFIX=true;;
 		-q) EXEC=false;;
 		-v) VERBOSE=true;;
@@ -387,7 +388,7 @@ do
 done
 
 # What command to run...
-case $opt in
+case ${opt} in
 	-r|--run)    docker_run    $@;;
 	-b|--build)  docker_build  $@;;
 	-i|--images) docker_images $@;;
