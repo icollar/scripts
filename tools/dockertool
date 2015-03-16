@@ -108,7 +108,7 @@ function docker_purge () {
 	containers=$(docker ps -a -q)
 	echo "Removing $(echo ${containers}| wc -w) container(s)"
 	for container in ${containers}; do
-		docker rm ${container}
+		docker rm -f ${container}
 	done
 	unset containers
 }
@@ -224,10 +224,12 @@ function docker_build () {
 
 	run "sudo docker build ${CACHE} -t ${IMAGE_PATH}:${VERSION:-latest} ${DOCKERFILE} ."
 
-	if [ "${RES}" != "<ID>" ]; then
-		if [ ${VERSION:-latest} != "latest" -a ${VERSION:-latest} != "dev" ]; then
-			echo "Tagging as latest"
-			run "docker tag -f ${IMAGE_PATH}:${VERSION} ${IMAGE_PATH}"
+	if [ "${TYPE}" != "db" ]; then
+		if [ "${RES}" != "<ID>" ]; then
+			if [ ${VERSION:-latest} != "latest" -a ${VERSION:-latest} != "dev" ]; then
+				echo "Tagging as latest"
+				run "docker tag -f ${IMAGE_PATH}:${VERSION} ${IMAGE_PATH}"
+			fi
 		fi
 	fi
 }
