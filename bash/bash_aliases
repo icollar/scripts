@@ -6,6 +6,7 @@ export GREP_OPT="-inrsI --color=auto --exclude-dir=.cvs --exclude-dir=.git --exc
 
 # Aliases
 # -------
+alias boot='source ~/.bashrc'
 alias tclsh="rlwrap tclsh"
 alias rsync='\rsync -avzC --exclude "*.*.swp"'
 alias cp='\cp -r'
@@ -97,15 +98,39 @@ function cdl () {
 	cd $(dirname $(!$))
 }
 
+# handy command for unpacking compressed artifacts and preserving versions
+function unpack () {
+	if [ -f $1 ] ; then
+		a=$(echo $1 | awk -F- '{print $2}')
+		v=$(echo $1 | awk -F- '{print $3}')
+		d="${a}-${v}"
+
+		mkdir $d
+
+		case $1 in
+			*.tar.bz2) tar xjf    $1 -C $d ;;
+			*.tar.gz)  tar xzf    $1 -C $d ;;
+			*.bz2)     bunzip2    $1 -C $d ;;
+			*.rar)     unrar x    $1 -C $d ;;
+			*.gz)      gunzip     $1 -C $d ;;
+			*.tar)     tar xf     $1 -C $d ;;
+			*.tbz2)    tar xjf    $1 -C $d ;;
+			*.tgz)     tar xzf    $1 -C $d ;;
+			*.zip)     unzip      $1 -C $d ;;
+			*.Z)       uncompress $1 -C $d ;;
+			*.7z)      7z x       $1 -C $d ;;
+			*) echo "'$1' cannot be extracted via >extract<" ;;
+		esac
+	else
+		echo "'$1' is not a valid file!"
+	fi
+}
+
 # Now this is just silly... custom command_not_found_handle function...
 eval $(type command_not_found_handle | sed '1d' | sed '1s/handle/handle2/')
 function command_not_found_handle () {
-	if  [ -f $1 ];then
-		vi $1
-	else
-		echo "CUSTOM!!!"
-		command_not_found_handle2 $1 ;
-	fi
+	echo "and you fail..."
+	command_not_found_handle2 $1
 }
 
 

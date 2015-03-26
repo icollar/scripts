@@ -78,6 +78,7 @@ nmap <silent> <C-m> :bn<CR>
 nmap <silent> <leader>q ml:call BufferQuit()<CR>
 nmap <silent> <leader>o ml:call Space2Tab()<CR>
 nmap <silent> <leader>p ml:call Tab2Space()<CR>
+nmap <silent> <leader>z ml:call FixWhiteSpace()<CR>
 
 imap <NUL> <Space>
 map <C-Z> <Nop>
@@ -125,8 +126,10 @@ function! ToggleMouse()
 	set list! number!
 	if &mouse == 'a'
 		set mouse=
+		NERDTreeClose
 	else
 		set mouse=a
+		NERDTree | wincmd l
 	endif
 endfunction
 
@@ -135,11 +138,15 @@ function! Space2Tab()
 	while search('^\t* \{2}') != 0
 		execute ':%s/^\t*\zs \{2}/\t/g'
 	endwhile
-endfu
+endfunction
 
 function! Tab2Space()
 	execute ':%s/\t/  /g'
-endfu
+endfunction
+
+function! FixWhiteSpace()
+	execute ':%s/\s\+$//g'
+endfunction
 
 
 " Remember where we were last time

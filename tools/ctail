@@ -55,6 +55,7 @@ if [[ -f ${CTAILFILE:-${HOME}/.ctailrc} ]]; then
 	FG_PURPLE=";35" ; BG_PURPLE=";45"
 	FG_CYAN=";36"   ; BG_CYAN=";46"
 	FG_WHITE=";37"  ; BG_WHITE=";47"
+	FG_LGREY=";2"
 
 	CS0=
 	CS1=i
@@ -68,7 +69,7 @@ if [[ -f ${CTAILFILE:-${HOME}/.ctailrc} ]]; then
 		cs="CS$(echo $line | awk '{print $4}')"
 		rx=$(echo $line | cut -d' ' -f 5-)
 
-		PERLOPT[$i]="s/$rx/\e[${wg:-0}${!fg}${!bg}m$&\e[m/${!cs}g"
+		PERLOPT[$i]="s/$rx/\$1\e[${wg:-0}${!fg}${!bg}m\$2\e[m\$3/${!cs}g"
 		i=$(($i+1))
 	done < <(grep -vE "^$|^\s*#" ${CTAILFILE:-${HOME}/.ctailrc})
 else
