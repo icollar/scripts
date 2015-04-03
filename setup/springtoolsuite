@@ -1,0 +1,21 @@
+sudo mkdir -p /opt/sts
+sudo chown ${USER}:${USER} /opt/sts
+cd /opt/sts
+curl -SL http://dist.springsource.com/release/STS/3.6.4.RELEASE/dist/e4.4/spring-tool-suite-3.6.4.RELEASE-e4.4.2-linux-gtk-x86_64.tar.gz -o /opt/sts/spring-tool-suite.tar.gz
+tar -xvf spring-tool-suite.tar.gz --strip-components=1
+rm spring-tool-suite.tar.gz
+ln -s sts-* bundle
+
+DESKTOP_ENTRY="[Desktop Entry]
+Name=STS
+Type=Application
+Exec=/opt/sts/bundle/STS
+Terminal=false
+Icon=/opt/sts/bundle/icon.xpm
+NoDisplay=false
+Categories=Development;IDE;
+Name[en]=STS
+"
+sudo vi /usr/share/applications/sts.desktop -c "call append(line('$'),'$DESKTOP_ENTRY')" -c "x"
+
+# vim:ft=sh

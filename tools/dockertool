@@ -222,7 +222,7 @@ function docker_build () {
 	_parse_dockerfile ${FILE}
 	_image_path
 
-	run "sudo docker build ${CACHE} -t ${IMAGE_PATH}:${VERSION:-latest} ${DOCKERFILE} ."
+	run "docker build ${CACHE} -t ${IMAGE_PATH}:${VERSION:-latest} ${DOCKERFILE} ."
 
 	if [ "${TYPE}" != "db" ]; then
 		if [ "${RES}" != "<ID>" ]; then
