@@ -43,6 +43,10 @@ cp ${SETTINGS}/bashrc           ${HOME}/.bashrc
 cp ${SETTINGS}/vimrc            ${HOME}/.vimrc
 cp ${SETTINGS}/xfce4-helpers.rc ${HOME}/.config/xfce4/helpers.rc
 cp ${SETTINGS}/gtkrc-2.0        ${HOME}/.gtkrc-2.0
+cp ${SETTINGS}/pystartup        ${HOME}/.pystartup
+
+# need to replace "~" with value of ${HOME}
+sed -i "s-~-${HOME}-" ${HOME}/.pystartup
 
 # xfce environment settings
 tar -xvf ${SETTINGS}/xfce-perchannel-xml.tar.bz2 -C ${XFCONF_DIR}
