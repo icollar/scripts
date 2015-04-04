@@ -54,4 +54,7 @@ SUDOERS="${USER} ALL=(ALL) NOPASSWD: ALL"
 sudo vi /etc/sudoers.d/${USER} -c "call append(line('$'),'$SUDOERS')" -c "x"
 sudo chmod 0440 /etc/sudoers.d/${USER}
 
+sudo mkdir -p /space/GIT
+sudo chown ${USER}:${USER} -R /space
+
 echo "Initialization complete. Restart machine!"
