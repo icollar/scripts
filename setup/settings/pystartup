@@ -3,10 +3,7 @@
 # bound to the Esc key by default (you can change it - see readline docs).
 #
 # Store the file in ~/.pystartup, and set an environment variable to point
-# to it:  "export PYTHONSTARTUP=/home/gsf/.pystartup" in bash.
-#
-# Note that PYTHONSTARTUP does *not* expand "~", so you have to put in the
-# full path to your home directory.
+# to it:  "export PYTHONSTARTUP=~/.pystartup" in bash.
 
 import atexit
 import os
@@ -14,8 +11,6 @@ import readline
 import rlcompleter
 import sys
 
-# change autocomplete to tab
-readline.parse_and_bind("tab: complete")
 
 historyPath = os.path.expanduser("~/.pyhistory")
 
@@ -28,5 +23,8 @@ if os.path.exists(historyPath):
 
 atexit.register(save_history)
 
-# anything not deleted (sys and os) will remain in the interpreter session
-del atexit, readline, rlcompleter, save_history, historyPath
+readline.parse_and_bind('tab:complete')
+
+del os, atexit, readline, rlcompleter, save_history, historyPath
+
+# vim:ft=python:
