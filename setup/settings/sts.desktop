@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=STS
+Type=Application
+Exec=/opt/sts/bundle/STS
+Terminal=false
+Icon=/opt/sts/bundle/icon.xpm
+NoDisplay=false
+Categories=Development;IDE;
+Name[en]=STS
