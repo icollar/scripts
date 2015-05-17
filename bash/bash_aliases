@@ -21,6 +21,8 @@ alias df='df -kTh'
 alias si='sudo -E vi'
 alias ssh="ssh $SSH_OPT"
 alias gp="grep $GREP_OPT"
+alias tidyXML="tidy -xml -indent -q"
+
 
 
 function vi () {
