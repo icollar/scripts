@@ -1,0 +1,201 @@
+#!/bin/bash
+# ----------------------------------------------------
+# @author  icollar
+# @version 2.0.1
+# @title   grid
+# @desc    Window positioning tool. Resizes and moves
+#          the window in focus to the desired location
+#          and size; in thirds, half two thirds.
+# ----------------------------------------------------
+
+WINDOW_ID=$(xdotool getactivewindow)
+
+FRAME=$(xprop -id $WINDOW_ID | grep -Po 'FRAME.*=\s*\K.*')
+FRAME_LEFT=$(  echo $FRAME | awk -F, '{print $1}')
+FRAME_RIGHT=$( echo $FRAME | awk -F, '{print $2}')
+FRAME_TOP=$(   echo $FRAME | awk -F, '{print $3}')
+FRAME_BOTTOM=$(echo $FRAME | awk -F, '{print $4}')
+
+# Get the panel height, which is the
+# starting Y position for the window
+# NB only tested on XCFE so far...
+# Update, seems to be ok for Unity
+PANEL_H=$(wmctrl -lG | head -n 1| awk '/[pP]anel/{print $6}')
+
+screens=0
+for screen in $(xrandr | grep -Po '[^(dis)]connected[\sa-z]*\K\d+x\d+\+\d+')
+do
+	screens=$((screens+1))
+	if [ $(echo $screen | awk -F[x+] '{print $3}') -gt 0 ];then
+		DISPLAY_RW=$(echo $screen | awk -F[x+] '{print $1}')
+		DISPLAY_RH=$(echo $screen | awk -F[x+] '{print $2}')
+	else
+		DISPLAY_LW=$(echo $screen | awk -F[x+] '{print $1}')
+		DISPLAY_LH=$(echo $screen | awk -F[x+] '{print $2}')
+	fi
+done
+
+CURRENT_W=$(xwininfo -id $WINDOW_ID | awk '/Width:/{print $NF}')
+CURRENT_X=$(xwininfo -id $WINDOW_ID | awk '/Absolute.*X:/{print $NF}')
+
+if [[ "$CURRENT_X" -lt "$DISPLAY_LW" ]]; then
+	DISPLAY_W=$DISPLAY_LW
+	DISPLAY_H=$DISPLAY_LH
+	X=0
+else
+	DISPLAY_W=$DISPLAY_RW
+	DISPLAY_H=$DISPLAY_RH
+	X=$DISPLAY_LW
+fi
+
+
+W13=$((DISPLAY_W/3))
+W12=$((DISPLAY_W/2))
+W23=$((DISPLAY_W/3*2))
+
+
+function move-left () {
+	if [ $screens -gt 1 -a $CURRENT_X -gt $DISPLAY_LW ]; then
+		H=-1
+		Y=-1
+		W=-1
+		X=$((CURRENT_X - $DISPLAY_RW))
+	else
+		exit 1
+	fi
+}
+function move-right () {
+	if [ $screens -gt 1 -a $CURRENT_X -lt $DISPLAY_LW ]; then
+		H=-1
+		Y=-1
+		W=-1
+		X=$((CURRENT_X + $DISPLAY_LW))
+	else
+		exit 1
+	fi
+}
+
+function width () {
+	if [ $CURRENT_W -gt $W23 ]; then
+		W=$W23
+	elif [ $CURRENT_W -ge $((W23-5)) ]; then
+		W=$W12
+	elif [ $CURRENT_W -ge $((W12-5)) ]; then
+		W=$W13
+	else
+		W=$W23
+	fi
+}
+
+function bottom () {
+	Y=$(((DISPLAY_H - PANEL_H) / 2 + FRAME_TOP))
+}
+
+function half-height () {
+	H=$(((DISPLAY_H - PANEL_H) / 2 - FRAME_TOP))
+}
+
+function right-x () {
+	X=$((X + DISPLAY_W - W))
+}
+
+function left () {
+	wmctrl -ir $WINDOW_ID -b add,maximized_vert
+	width
+	Y=0
+	H=-1
+}
+
+function right () {
+	wmctrl -ir $WINDOW_ID -b add,maximized_vert
+	width
+	Y=0
+	H=-1
+	right-x
+}
+
+function middle () {
+	wmctrl -ir $WINDOW_ID -b add,maximized_vert
+	W=$W13
+	Y=0
+	H=-1
+	X=$((X + W13))
+}
+
+function top-middle () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert
+	wmctrl -ir $WINDOW_ID -b toggle,maximized_horz
+	W=$W13
+	Y=0
+	half-height
+	X=$((X + W13))
+}
+
+
+function top-left () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
+	width
+	Y=0
+	half-height
+}
+
+function top-right () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
+	width
+	Y=0
+	H=$(((DISPLAY_H - PANEL_H) / 2))
+	right-x
+}
+
+function bottom-left () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
+	width
+	X=0
+	half-height
+	bottom
+}
+
+function bottom-right () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
+	width
+	half-height
+	bottom
+	right-x
+}
+
+function bottom-middle () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert
+	wmctrl -ir $WINDOW_ID -b toggle,maximized_horz
+	W=$W13
+	half-height
+	X=$((X + W13))
+	bottom
+}
+
+
+case $1 in
+	--move-left)     move-left;;
+	--move-right)    move-right;;
+	--left)          left;;
+	--right)         right;;
+	--middle)        middle;;
+	--top-left)      top-left;;
+	--top-right)     top-right;;
+	--top-middle)    top-middle;;
+	--bottom-left)   bottom-left;;
+	--bottom-right)  bottom-right;;
+	--bottom-middle) bottom-middle;;
+	*) exit 1;;
+esac
+
+
+# Remove any full screen or maximized attributes and move
+# the window to the new set of co-ordinates, width and height
+wmctrl -ir $WINDOW_ID -e 0,$X,$Y,$W,$H
+
+# For some reason (still unknown) the first move of the
+# window does not move it to the correct postion. Executing
+# the command a second time seems to place the window in
+# the desired location.
+sleep 0.1
+wmctrl -ir $WINDOW_ID -e 0,$X,$Y,$W,$H

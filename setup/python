@@ -1,9 +1,12 @@
-sudo apt-get install python-pip
-pip install pyyaml
-pip install pep8
+sudo apt-get install -y \
+	python-pip \
+	python-wnck \
+	python-xlib
+sudo pip install pyyaml
+sudo pip install pep8
 sudo pip install pylint
 
-cp ${SETTINGS}/pep8     ${HOME}/.pep8
-cp ${SETTINGS}/pylintrc ${HOME}/.pylintrc
+cp settings/pep8     ${HOME}/.pep8
+cp settings/pylintrc ${HOME}/.pylintrc
 
 # vim:ft=sh

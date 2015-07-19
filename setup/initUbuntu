@@ -1,0 +1,71 @@
+#!/bin/bash
+# -------------------
+# xubuntu init script
+# -------------------
+
+# First, make sure the system is fully
+# up-to-date with online repositories
+sudo apt-get update
+sudo apt-get upgrade -y
+
+# Initalise some handy variables
+SETUP=$(pwd)
+SETTINGS=${SETUP}/settings
+
+# Install system packages
+apps="gnome-do gnome-system-monitor gnome-terminal chromium-browser meld
+	flashplugin-installer curl ssh sshpass rlwrap vim wmctrl xdotool
+	cvs subversion git gdebi apache2 maven tidy"
+
+dev_apps="git cvs subversion meld vim maven tidy rlwrap"
+gui_apps="wmctrl xdotool chromium-browser"
+access_apps="curl wget ssh sshpass"
+
+apps="$dev_apps $gui_apps $access_apps"
+
+for app in $apps; do
+	sudo apt-get install -y $app
+done
+
+# Remove pointless directories
+cd ${HOME}
+rm -rf Music Pictures Public Templates Videos Desktop
+
+# Personal preference for terminal fonts
+git clone https://github.com/Lokaltog/powerline-fonts ~/.fonts/powerline-fonts
+fc-cache -vf ~/.fonts/powerline-fonts
+
+# Make sure that some useful directories exists
+GPROFILE_DIR=${HOME}/.gconf/apps/gnome-terminal/profiles/Default
+for dir in "${GPROFILE_DIR}"; do
+	if [[ ! -d ${dir} ]]; then
+		mkdir -p ${dir}
+	fi
+done
+
+# Copy settings and rc files to relevant places
+cp ${SETTINGS}/bashrc    ${HOME}/.bashrc
+cp ${SETTINGS}/vimrc     ${HOME}/.vimrc
+cp ${SETTINGS}/pystartup ${HOME}/.pystartup
+
+# need to replace "~" with value of ${HOME}
+sed -i "s-~-${HOME}-" ${HOME}/.pystartup
+
+# gconf terminal settings
+gconftool-2 --load ${SETTINGS}/gnome-terminal-default.xml
+
+SUDOERS="${USER} ALL=(ALL) NOPASSWD: ALL"
+sudo vi /etc/sudoers.d/${USER} -c "call append(line('$'),'$SUDOERS')" -c "x"
+sudo chmod 0440 /etc/sudoers.d/${USER}
+
+# Create dev directories
+sudo mkdir -p /space
+sudo chown ${USER}:${USER} -R /space
+mkdir -p /space/CVS
+mkdir -p /space/GIT
+mkdir -p /space/STASH
+mkdir -p /space/SVN
+mkdir -p /space/logs
+
+
+echo "Initialization complete. Restart machine!"
