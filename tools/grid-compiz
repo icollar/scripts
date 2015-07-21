@@ -10,16 +10,7 @@
 
 WINDOW_ID=$(xdotool getactivewindow)
 
-FRAME=$(xprop -id $WINDOW_ID | grep -Po 'FRAME.*=\s*\K.*')
-FRAME_LEFT=$(  echo $FRAME | awk -F, '{print $1}')
-FRAME_RIGHT=$( echo $FRAME | awk -F, '{print $2}')
-FRAME_TOP=$(   echo $FRAME | awk -F, '{print $3}')
-FRAME_BOTTOM=$(echo $FRAME | awk -F, '{print $4}')
-
-# Get the panel height, which is the
-# starting Y position for the window
-# NB only tested on XCFE so far...
-# Update, seems to be ok for Unity
+FRAME_H=$(xprop -id $WINDOW_ID | grep -Po 'FRAME.*=\s*\K.*' | awk -F, '{print $3}')
 PANEL_H=$(wmctrl -lG | head -n 1| awk '/[pP]anel/{print $6}')
 
 screens=0
@@ -55,7 +46,7 @@ W23=$((DISPLAY_W/3*2))
 
 
 function move-left () {
-	if [ $screens -gt 1 -a $CURRENT_X -gt $DISPLAY_LW ]; then
+	if [ $screens -gt 1 -a $CURRENT_X -ge $DISPLAY_LW ]; then
 		H=-1
 		Y=-1
 		W=-1
@@ -88,11 +79,11 @@ function width () {
 }
 
 function bottom () {
-	Y=$(((DISPLAY_H - PANEL_H) / 2 + FRAME_TOP))
+	Y=$(((DISPLAY_H - PANEL_H) / 2 + FRAME_H))
 }
 
 function half-height () {
-	H=$(((DISPLAY_H - PANEL_H) / 2 - FRAME_TOP))
+	H=$(((DISPLAY_H - PANEL_H) / 2 - FRAME_H))
 }
 
 function right-x () {
@@ -150,7 +141,6 @@ function top-right () {
 function bottom-left () {
 	wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
 	width
-	X=0
 	half-height
 	bottom
 }
@@ -189,13 +179,6 @@ case $1 in
 esac
 
 
-# Remove any full screen or maximized attributes and move
-# the window to the new set of co-ordinates, width and height
 wmctrl -ir $WINDOW_ID -e 0,$X,$Y,$W,$H
-
-# For some reason (still unknown) the first move of the
-# window does not move it to the correct postion. Executing
-# the command a second time seems to place the window in
-# the desired location.
 sleep 0.1
 wmctrl -ir $WINDOW_ID -e 0,$X,$Y,$W,$H
