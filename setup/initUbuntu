@@ -13,15 +13,10 @@ SETUP=$(pwd)
 SETTINGS=${SETUP}/settings
 
 # Install system packages
-apps="gnome-do gnome-system-monitor gnome-terminal chromium-browser meld
-	flashplugin-installer curl ssh sshpass rlwrap vim wmctrl xdotool
-	cvs subversion git gdebi apache2 maven tidy"
-
-dev_apps="git cvs subversion meld vim maven tidy rlwrap"
-gui_apps="wmctrl xdotool chromium-browser"
-access_apps="curl wget ssh sshpass"
-
-apps="$dev_apps $gui_apps $access_apps"
+apps="git cvs subversion meld vim maven tidy rlwrap
+	wmctrl xdotool chromium-browser access_apps
+	curl wget ssh sshpass gdebi compizconfig-settings-manager
+	unity-tweak-tool dconf-editor"
 
 for app in $apps; do
 	sudo apt-get install -y $app
@@ -29,7 +24,7 @@ done
 
 # Remove pointless directories
 cd ${HOME}
-rm -rf Music Pictures Public Templates Videos Desktop
+rm -rf Music Pictures Public Templates Videos Desktop examples.desktop
 
 # Personal preference for terminal fonts
 git clone https://github.com/Lokaltog/powerline-fonts ~/.fonts/powerline-fonts
