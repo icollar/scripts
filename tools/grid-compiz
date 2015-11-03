@@ -91,6 +91,7 @@ function right-x () {
 }
 
 function left () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_horz
 	wmctrl -ir $WINDOW_ID -b add,maximized_vert
 	width
 	Y=0
@@ -98,6 +99,7 @@ function left () {
 }
 
 function right () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_horz
 	wmctrl -ir $WINDOW_ID -b add,maximized_vert
 	width
 	Y=0
@@ -106,6 +108,7 @@ function right () {
 }
 
 function middle () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_horz
 	wmctrl -ir $WINDOW_ID -b add,maximized_vert
 	W=$W13
 	Y=0
@@ -163,6 +166,25 @@ function bottom-middle () {
 }
 
 
+function sticky () {
+	wmctrl -ir $WINDOW_ID -b toggle,sticky
+	exit 1
+}
+
+function above () {
+	wmctrl -ir $WINDOW_ID -b toggle,above
+	exit 1
+}
+
+function tiny () {
+	wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz,above
+	wmctrl -ir $WINDOW_ID -b add,above
+	top-right
+	H=80
+}
+
+
+
 case $1 in
 	--move-left)     move-left;;
 	--move-right)    move-right;;
@@ -175,6 +197,9 @@ case $1 in
 	--bottom-left)   bottom-left;;
 	--bottom-right)  bottom-right;;
 	--bottom-middle) bottom-middle;;
+	--sticky)        sticky;;
+	--above)         above;;
+	--tiny)          tiny;;
 	*) exit 1;;
 esac
 

@@ -19,7 +19,7 @@
 alias cd='push_back_history;clear_forward_history;change_directory'
 
 function here () {
-	echo -e "Current: \e[1;32m$(pwd)\e[m"
+	echo -e "Current: \e[1;32m$(pwd)\e[m $(__git_ps1)"
 	ls -lghX
 }
 

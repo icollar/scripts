@@ -128,14 +128,8 @@ function unpack () {
 	fi
 }
 
-# Now this is just silly... custom command_not_found_handle function...
-eval $(type command_not_found_handle | sed '1d' | sed '1s/handle/handle2/')
-function command_not_found_handle () {
-	echo "and you fail..."
-	command_not_found_handle2 $1
+function memory () {
+	sudo dmidecode -t 17
 }
-
-
-
 
 # vim:ft=sh:

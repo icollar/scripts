@@ -1,0 +1,21 @@
+#!/bin/bash
+
+WINDOW_ID=$(xdotool getactivewindow)
+
+mouse=$(xdotool getmouselocation | grep -Po '\d+' | head -n 2)
+
+wmctrl -ir $WINDOW_ID -b remove,maximized_vert,maximized_horz
+wmctrl -ir $WINDOW_ID -e 0,0,0,-1,-1
+
+xdotool key alt+F8
+
+max=$(xrandr | grep -Po '[^(dis)]connected[\sa-z]*\K\d+x\d+' | awk -Fx 'BEGIN{x=0;y=0}{x+=$1;y+=$2}END{print x;print y}')
+
+sleep 0.1
+xdotool mousemove $max
+xdotool mousemove $max
+
+xdotool click 1
+
+sleep 0.1
+xdotool mousemove $mouse
